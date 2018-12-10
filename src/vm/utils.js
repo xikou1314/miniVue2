@@ -17,7 +17,7 @@ _.truthy = function truthy(value) {
 };
 
 _.isString = function isString(list) {
-  return _.type === 'String';
+  return _.type(list) === 'String';
 };
 
 _.each = function each(array, fn) {

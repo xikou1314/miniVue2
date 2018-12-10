@@ -1,4 +1,4 @@
-var _ = require('./util');
+var _ = require('./utils');
 var patch = require('./patch');
 var listDiff = require('list-diff2');
 
@@ -52,6 +52,7 @@ function dfsWalk(oldNode, newNode, index, patches) {
 
 function diffChildren(oldChildren, newChildren, index, patches, currentPatch) {
   var diffs = listDiff(oldChildren, newChildren, 'key');
+
   newChildren = diffs.children;
 
   if (diffs.moves.length) {
@@ -61,11 +62,14 @@ function diffChildren(oldChildren, newChildren, index, patches, currentPatch) {
 
   var leftNode = null;
   var currentNodeIndex = index;
+
   _.each(oldChildren, function(child, i) {
     var newChild = newChildren[i];
+ 
     currentNodeIndex = (leftNode && leftNode.count)
       ? currentNodeIndex + leftNode.count + 1
       : currentNodeIndex + 1;
+
     dfsWalk(child, newChild, currentNodeIndex, patches);
     leftNode = child;
   });
