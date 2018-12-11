@@ -213,6 +213,7 @@ function parse(template) {
   var currentParent; // 当前节点的父节点
   var root; // 根节点
   var stack = []; // 辅助缓存stack
+  var args = [];
   parseHTML(template, {
     start: function start(tag, attrs, unary) {
       var element = {
@@ -241,7 +242,7 @@ function parse(template) {
       var element = stack[stack.length - 1]; /* 从stack中取出最后一个ele */
       var lastNode = element.children[element.children.length - 1]; /* 获取该ele的最后一个子节点 */
       //  /*该子节点是非<pre>标签的文本*/
-      if (lastNode && lastNode.type === 3 && lastNode.text === ' ' && !inPre) {
+      if (lastNode && lastNode.type === 3 && lastNode.text === ' ') {
         element.children.pop();
       }
       // pop stack
@@ -256,15 +257,15 @@ function parse(template) {
       var children = currentParent.children; // 取出children
       // text => {{message}}
       if (text) {
-        var expression;
-        if (text !== ' ' && (expression = parseText(text))) {
+        var tmp = parseText(text);
+        if (text !== ' ' && tmp && tmp.expression) {
           // 将解析后的text弄进children数组
-
+          args = args.concat(tmp.exps);
           children.push({
             type: 2,
-            expression: expression,
+            expression: tmp.expression,
             text: text,
-            tplFn: gTplFn(expression)
+            tplFn: gTplFn(tmp.expression)
           });
         } else if (text !== ' ' || !children.length || children[children.length - 1].text !== ' ') {
           children.push({
@@ -275,7 +276,10 @@ function parse(template) {
       }
     }
   });
-  return root;
+  return {
+    root,
+    args
+  };
 }
 //　在最后，调用processAttrs对动态绑定的属性（v-,@,:）进行处理，代码如下：
 function processAttrs(el) {
@@ -295,12 +299,12 @@ function processAttrs(el) {
 function addAttr(el, name, value) {
   (el.attrs || (el.attrs = [])).push({name: name, value: value});
 }
-function parseText(text, // 对Text进行解析
-  delimiters) {
-  var tagRE = delimiters ? buildRegex(delimiters) : defaultTagRE; // 如果delimiters为false defaultTagRE 为匹配{{xxx}}的正则
-  if (!tagRE.test(text)) { // /\{\{((?:.|\n)+?)\}\}/g 在这里调用test方法后lasatIndex会变化
+function parseText(text) {
+  var tagRE = defaultTagRE; 
+  if (!tagRE.test(text)) { 
     return;
   }
+  var exps = [];
   var tokens = [];
   var lastIndex = tagRE.lastIndex = 0;
   var match; var index;
@@ -321,13 +325,17 @@ function parseText(text, // 对Text进行解析
     // tag token
     // 该方法对特殊字符进行处理
     var exp = (match[1].trim());
+    exps.push(exp);
     tokens.push((' od.' + exp + ' '));
     lastIndex = index + match[0].length;
   }
   if (lastIndex < text.length) { // push}}后面的文本
     tokens.push(JSON.stringify(text.slice(lastIndex)));
   }
-  return tokens.join('+');
+  return {
+    exps,
+    expression: tokens.join('+')
+  };
 }
 
 function makeAttrsMap(attrs) {

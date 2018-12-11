@@ -2,7 +2,6 @@ import Node from './node';
 import Watcher from './watcher';
 import Data from './data';
 import render from './render';
-import astToVm from '../parse/astToVm';
 class KV {
   constructor(opt = {}) {
     this._$opt = opt;
@@ -24,7 +23,6 @@ class KV {
 
     this.$watcher = new Watcher(this.$data);
 
-    console.log(this.$watcher);
     this.$watcher.linkNode(this.$root);
 
  

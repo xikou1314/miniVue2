@@ -40,20 +40,15 @@ class Watcher {
   }
 
   linkNode($node) {
-    // for (let i = 0, n; n = $node.$args[i]; i++) {
-    //   if (this.$data[n] && this.$data._od_[n] && this.$data._od_[n].linkNodes.indexOf($node) === -1) {
-    //     this.$data._od_[n].linkNodes.push($node);
-    //   }
-    // }
-    for (var i in this.$data) {
-      if (this.$data._od_[i] && this.$data._od_[i].linkNodes.indexOf($node) === -1) {
-        this.$data._od_[i].linkNodes.push($node);
+    for (let i = 0, n; n = $node.$args[i]; i++) {
+      if (this.$data[n] && this.$data._od_[n] && this.$data._od_[n].linkNodes.indexOf($node) === -1) {
+        this.$data._od_[n].linkNodes.push($node);
       }
     }
   }
 
   updateData() {
-
+    
   }
 }
 

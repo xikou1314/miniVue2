@@ -14,6 +14,15 @@ var KV = (function () {
 
   };
 
+  let EventLoop = {
+    d_o(fn) {
+      let p = Promise.resolve();
+      p.then(fn).catch((e) => {
+        console.log(e);
+      });
+    }
+  };
+
   var ncname = '[a-zA-Z_][\\w\\-\\.]*';
   var qnameCapture = '((?:' + ncname + '\\:)?' + ncname + ')';
   var startTagOpen = new RegExp('^<' + qnameCapture); // 匹配开始标签的 <
@@ -225,6 +234,7 @@ var KV = (function () {
     var currentParent; // 当前节点的父节点
     var root; // 根节点
     var stack = []; // 辅助缓存stack
+    var args = [];
     parseHTML(template, {
       start: function start(tag, attrs, unary) {
         var element = {
@@ -253,7 +263,7 @@ var KV = (function () {
         var element = stack[stack.length - 1]; /* 从stack中取出最后一个ele */
         var lastNode = element.children[element.children.length - 1]; /* 获取该ele的最后一个子节点 */
         //  /*该子节点是非<pre>标签的文本*/
-        if (lastNode && lastNode.type === 3 && lastNode.text === ' ' && !inPre) {
+        if (lastNode && lastNode.type === 3 && lastNode.text === ' ') {
           element.children.pop();
         }
         // pop stack
@@ -268,15 +278,15 @@ var KV = (function () {
         var children = currentParent.children; // 取出children
         // text => {{message}}
         if (text) {
-          var expression;
-          if (text !== ' ' && (expression = parseText(text))) {
+          var tmp = parseText(text);
+          if (text !== ' ' && tmp && tmp.expression) {
             // 将解析后的text弄进children数组
-
+            args = args.concat(tmp.exps);
             children.push({
               type: 2,
-              expression: expression,
+              expression: tmp.expression,
               text: text,
-              tplFn: gTplFn(expression)
+              tplFn: gTplFn(tmp.expression)
             });
           } else if (text !== ' ' || !children.length || children[children.length - 1].text !== ' ') {
             children.push({
@@ -287,7 +297,10 @@ var KV = (function () {
         }
       }
     });
-    return root;
+    return {
+      root,
+      args
+    };
   }
   //　在最后，调用processAttrs对动态绑定的属性（v-,@,:）进行处理，代码如下：
   function processAttrs(el) {
@@ -306,12 +319,12 @@ var KV = (function () {
   function addAttr(el, name, value) {
     (el.attrs || (el.attrs = [])).push({name: name, value: value});
   }
-  function parseText(text, // 对Text进行解析
-    delimiters) {
-    var tagRE = delimiters ? buildRegex(delimiters) : defaultTagRE; // 如果delimiters为false defaultTagRE 为匹配{{xxx}}的正则
-    if (!tagRE.test(text)) { // /\{\{((?:.|\n)+?)\}\}/g 在这里调用test方法后lasatIndex会变化
+  function parseText(text) {
+    var tagRE = defaultTagRE; 
+    if (!tagRE.test(text)) { 
       return;
     }
+    var exps = [];
     var tokens = [];
     var lastIndex = tagRE.lastIndex = 0;
     var match; var index;
@@ -332,13 +345,17 @@ var KV = (function () {
       // tag token
       // 该方法对特殊字符进行处理
       var exp = (match[1].trim());
+      exps.push(exp);
       tokens.push((' od.' + exp + ' '));
       lastIndex = index + match[0].length;
     }
     if (lastIndex < text.length) { // push}}后面的文本
       tokens.push(JSON.stringify(text.slice(lastIndex)));
     }
-    return tokens.join('+');
+    return {
+      exps,
+      expression: tokens.join('+')
+    };
   }
 
   function makeAttrsMap(attrs) {
@@ -513,34 +530,6 @@ var KV = (function () {
     }
     return childs;
   }
-
-  const render = {
-
-    mount($node, $dom) {
-
-      // let $newDom = this.generalDom($node.$tplfn($data));
-      
-
-      this.replaceNode($dom, $node);
-
-    },
-
-    generalDom(domStr) {
-      var $temp = document.createElement('div');
-      $temp.innerHTML = domStr.trim(); // 不然会有多余的空格等东西
-      return $temp.childNodes[0];
-    },
-
-    replaceNode(newDom, node) {
-      let $el = node.$el;
-
-      $el.parentNode.replaceChild(newDom, $el);
-
-      node.$el = newDom;
-    }
-
-
-  };
 
   var REPLACE = 0;
   var REORDER = 1;
@@ -921,8 +910,9 @@ var KV = (function () {
         this.$template = $t.innerHTML.trim();
       }
       // ast
-      this.$ast = new Parse(this.$template);
-   
+      let $parse = new Parse(this.$template);
+      this.$ast = $parse.root;
+      this.$args = $parse.args;
       // // virtualDom 但是不挂载数据
       this.$vm = astToVm(this.$ast, this.$data);
       this.$dom = this.$vm.render();
@@ -931,14 +921,11 @@ var KV = (function () {
 
     update() {
       // 构造新的vm 使用diff算法进行比较 再调用patch方法
-      // EventLoop.d_o(Render.mount.bind(Render, this, this.$data));
-      console.log('更新');
-      let $newVm = astToVm(this.$ast, this.$data);
-      console.log($newVm);
-      console.log(diff_1$1(this.$vm, $newVm));
-      let patches = diff_1$1(this.$vm, $newVm);
-      patch_1(this.$dom, patches);
-
+      EventLoop.d_o(function() {
+        let $newVm = astToVm(this.$ast, this.$data);
+        let patches = diff_1$1(this.$vm, $newVm);
+        patch_1(this.$dom, patches);
+      }.bind(this));
     }
 
   }
@@ -985,20 +972,15 @@ var KV = (function () {
     }
 
     linkNode($node) {
-      // for (let i = 0, n; n = $node.$args[i]; i++) {
-      //   if (this.$data[n] && this.$data._od_[n] && this.$data._od_[n].linkNodes.indexOf($node) === -1) {
-      //     this.$data._od_[n].linkNodes.push($node);
-      //   }
-      // }
-      for (var i in this.$data) {
-        if (this.$data._od_[i] && this.$data._od_[i].linkNodes.indexOf($node) === -1) {
-          this.$data._od_[i].linkNodes.push($node);
+      for (let i = 0, n; n = $node.$args[i]; i++) {
+        if (this.$data[n] && this.$data._od_[n] && this.$data._od_[n].linkNodes.indexOf($node) === -1) {
+          this.$data._od_[n].linkNodes.push($node);
         }
       }
     }
 
     updateData() {
-
+      
     }
   }
 
@@ -1025,6 +1007,31 @@ var KV = (function () {
     }
   }
 
+  const render = {
+
+    mount($node, $dom) {
+
+      this.replaceNode($dom, $node);
+
+    },
+
+    generalDom(domStr) {
+      var $temp = document.createElement('div');
+      $temp.innerHTML = domStr.trim(); // 不然会有多余的空格等东西
+      return $temp.childNodes[0];
+    },
+
+    replaceNode(newDom, node) {
+      let $el = node.$el;
+
+      $el.parentNode.replaceChild(newDom, $el);
+
+      node.$el = newDom;
+    }
+
+
+  };
+
   class KV {
     constructor(opt = {}) {
       this._$opt = opt;
@@ -1046,7 +1053,6 @@ var KV = (function () {
 
       this.$watcher = new Watcher(this.$data);
 
-      console.log(this.$watcher);
       this.$watcher.linkNode(this.$root);
 
    

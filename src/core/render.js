@@ -2,9 +2,6 @@ const render = {
 
   mount($node, $dom) {
 
-    // let $newDom = this.generalDom($node.$tplfn($data));
-    
-
     this.replaceNode($dom, $node);
 
   },
