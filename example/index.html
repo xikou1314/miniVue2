@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<app id="app"></app>
+<script id="t1" type="text/html">
+    <div>
+        <span style="color:red">{{a}}</span> {{b}}
+        {{c}}
+        <div>
+            <p>
+                测试
+            </p>
+
+        </div>
+    </div>
+</script>
+
+<script src="../dist/bundle.js"></script>
+<script>
+    var kv = new KV({
+        el: "app",
+        template: "#t1",
+        data: {
+            a: '2018/12/10',
+            b: "hello",
+            c: "KV"
+        }
+    });
+</script>
+
+
+</body>
+</html>

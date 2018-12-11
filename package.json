@@ -1,0 +1,33 @@
+{
+  "name": "kazma",
+  "version": "1.0.0",
+  "description": "类vue、react的mvvm框架",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "node_modules/.bin/rollup -c"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xikou1314/kazma.git"
+  },
+  "keywords": [
+    "mvvm",
+    "javascript",
+    "kazma"
+  ],
+  "author": "尹杭",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/xikou1314/kazma/issues"
+  },
+  "homepage": "https://github.com/xikou1314/kazma#readme",
+  "dependencies": {
+    "list-diff2": "^0.1.4"
+  },
+  "devDependencies": {
+    "rollup": "^0.67.4",
+    "rollup-plugin-commonjs": "^9.2.0",
+    "rollup-plugin-node-resolve": "^3.4.0"
+  }
+}
