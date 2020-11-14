@@ -21,7 +21,7 @@ class Watcher {
             },
             set(value) {
               clearTimeout(timeoutHandler);
-              setTimeout(() => {
+              timeoutHandler = setTimeout(() => {
                 if (value !== od[key].value) {
                   var $n = od[key].linkNodes;
                   od[key].value = value;
